@@ -1,11 +1,11 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Icon } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
 interface ActionButtonProps {
   label: string;
-  icon: Icon;
+  icon: LucideIcon;
   onClick: () => void;
   variant?: 'default' | 'outline' | 'secondary' | 'ghost';
 }
