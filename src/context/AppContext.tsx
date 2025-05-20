@@ -53,6 +53,9 @@ interface AppContextType {
   addToGoal: (goalId: string, amount: number) => void;
   withdrawFromGoal: (goalId: string, amount: number) => void;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'date'>) => void;
+  toggleGoalAutoSave: (goalId: string) => void;
+  addToSavingsCategory: (categoryId: string, amount: number) => void;
+  withdrawFromSavingsCategory: (categoryId: string, amount: number) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -203,7 +206,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setAutoSaveEnabled((prev) => !prev);
   };
 
+  const toggleGoalAutoSave = (goalId: string) => {
+    setGoals((prevGoals) =>
+      prevGoals.map((goal) => {
+        if (goal.id === goalId) {
+          return {
+            ...goal,
+            autoSaveEnabled: !goal.autoSaveEnabled,
+          };
+        }
+        return goal;
+      })
+    );
+  };
+
   const addToGoal = (goalId: string, amount: number) => {
+    if (!amount || amount <= 0) return;
+    
     setIsLoading(true);
     setTimeout(() => {
       setGoals((prevGoals) =>
@@ -239,6 +258,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const withdrawFromGoal = (goalId: string, amount: number) => {
+    if (!amount || amount <= 0) return;
+    
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal || goal.currentAmount < amount) return;
+    
     setIsLoading(true);
     setTimeout(() => {
       setGoals((prevGoals) =>
@@ -270,6 +294,71 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, 1000);
   };
 
+  const addToSavingsCategory = (categoryId: string, amount: number) => {
+    if (!amount || amount <= 0) return;
+    
+    setIsLoading(true);
+    setTimeout(() => {
+      setSavingsCategories((prevCategories) =>
+        prevCategories.map((category) => {
+          if (category.id === categoryId) {
+            return {
+              ...category,
+              balance: category.balance + amount,
+            };
+          }
+          return category;
+        })
+      );
+      
+      setTotalBalance((prev) => prev + amount);
+      
+      // Add transaction
+      addTransaction({
+        type: 'deposit',
+        amount: amount,
+        description: `Deposit to ${savingsCategories.find(c => c.id === categoryId)?.name}`,
+        category: savingsCategories.find(c => c.id === categoryId)?.name,
+      });
+      
+      setIsLoading(false);
+    }, 1000);
+  };
+
+  const withdrawFromSavingsCategory = (categoryId: string, amount: number) => {
+    if (!amount || amount <= 0) return;
+    
+    const category = savingsCategories.find(c => c.id === categoryId);
+    if (!category || category.balance < amount) return;
+    
+    setIsLoading(true);
+    setTimeout(() => {
+      setSavingsCategories((prevCategories) =>
+        prevCategories.map((category) => {
+          if (category.id === categoryId && category.balance >= amount) {
+            return {
+              ...category,
+              balance: category.balance - amount,
+            };
+          }
+          return category;
+        })
+      );
+      
+      setTotalBalance((prev) => prev - amount);
+      
+      // Add transaction
+      addTransaction({
+        type: 'withdrawal',
+        amount: amount,
+        description: `Withdrawal from ${savingsCategories.find(c => c.id === categoryId)?.name}`,
+        category: savingsCategories.find(c => c.id === categoryId)?.name,
+      });
+      
+      setIsLoading(false);
+    }, 1000);
+  };
+
   const addTransaction = (transaction: Omit<Transaction, 'id' | 'date'>) => {
     const newTransaction: Transaction = {
       ...transaction,
@@ -294,6 +383,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addToGoal,
         withdrawFromGoal,
         addTransaction,
+        toggleGoalAutoSave,
+        addToSavingsCategory,
+        withdrawFromSavingsCategory
       }}
     >
       {children}

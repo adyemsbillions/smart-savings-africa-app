@@ -12,11 +12,14 @@ const CurrencyFormatter: React.FC<CurrencyFormatterProps> = ({
   currency = '₦',
   className = '',
 }) => {
+  // Handle potential NaN or undefined values
+  const safeAmount = isNaN(amount) ? 0 : amount;
+  
   const formattedAmount = new Intl.NumberFormat('en-NG', {
     style: 'decimal',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount);
+  }).format(safeAmount);
 
   return (
     <span className={className}>
